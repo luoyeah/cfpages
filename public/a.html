@@ -175,6 +175,28 @@
       box-shadow: 0 6px 15px rgba(46, 204, 113, 0.4);
     }
 
+    .btn-warning {
+      background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+      color: white;
+    }
+
+    .btn-warning:hover {
+      background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(243, 156, 18, 0.4);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(231, 76, 60, 0.4);
+    }
+
     .btn i {
       margin-right: 8px;
       font-size: 1.2rem;
@@ -289,6 +311,15 @@
       font-size: 0.9rem;
     }
 
+    .storage-info {
+      margin-top: 15px;
+      padding: 10px 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: #7f8c8d;
+    }
+
     @media (max-width: 768px) {
       .btn-group {
         flex-direction: column;
@@ -316,8 +347,8 @@
   <div id="app">
     <div class="app-container">
       <div class="header">
-        <h1>位置记录器与地图集成</h1>
-        <p>记录您的位置信息并在交互式地图上查看详细信息</p>
+        <h1>位置记录器 - 地图集成</h1>
+        <p>记录您的位置信息并在交互式地图上查看详细信息，数据会自动保存到浏览器本地存储</p>
       </div>
 
       <div class="main-content">
@@ -334,11 +365,18 @@
                 <button class="btn btn-success" @click="handleExport">
                   <i>📥</i> 导出为CSV文件
                 </button>
+                <button class="btn btn-warning" @click="handleClear">
+                  <i>🗑️</i> 清除所有数据
+                </button>
               </div>
 
               <div class="status" :class="{ error: status.isError }">
                 <i>{{ status.isError ? '❌' : 'ℹ️' }}</i>
                 <span>{{ status.message }}</span>
+              </div>
+
+              <div class="storage-info">
+                当前已保存 {{ records.length }} 条记录，占用存储空间约 {{ calculateStorageSize() }} KB
               </div>
 
               <div class="table-container">
@@ -405,7 +443,7 @@
       </div>
 
       <div class="footer">
-        <p>位置记录器 v1.2 &copy; 2025 - 基于Vue3和Leaflet地图</p>
+        <p>位置记录器 v1.3 &copy; 2025 - 基于Vue3和Leaflet地图 | 数据自动保存到本地</p>
       </div>
     </div>
   </div>
@@ -431,6 +469,93 @@
         const updateStatus = (message, isError = false) => {
           status.message = message;
           status.isError = isError;
+        };
+
+        // 保存数据到localStorage
+        const saveToLocalStorage = () => {
+          try {
+            const dataToSave = records.value.map(record => ({
+              id: record.id,
+              time: record.time,
+              date: record.date,
+              longitude: record.longitude,
+              latitude: record.latitude,
+              accuracy: record.accuracy,
+              error: record.error
+            }));
+            
+            localStorage.setItem('locationRecords', JSON.stringify(dataToSave));
+            console.log('数据已保存到本地存储');
+          } catch (error) {
+            console.error('保存数据到本地存储失败:', error);
+            updateStatus('保存数据失败，存储空间可能已满', true);
+          }
+        };
+
+        // 从localStorage加载数据
+        const loadFromLocalStorage = () => {
+          try {
+            const savedData = localStorage.getItem('locationRecords');
+            if (savedData) {
+              const parsedData = JSON.parse(savedData);
+              records.value = parsedData;
+              
+              // 为每个记录添加地图标记
+              records.value.forEach(record => {
+                if (!record.error) {
+                  addMarkerToMap(record);
+                }
+              });
+              
+              updateStatus(`已从本地存储加载 ${records.value.length} 条记录`);
+              
+              // 如果有记录，聚焦到最后一条
+              if (records.value.length > 0) {
+                focusOnRecord(records.value[records.value.length - 1]);
+              }
+            } else {
+              updateStatus('本地存储中没有找到历史记录');
+            }
+          } catch (error) {
+            console.error('从本地存储加载数据失败:', error);
+            updateStatus('加载历史记录失败', true);
+          }
+        };
+
+        // 清除所有数据
+        const handleClear = () => {
+          if (confirm('确定要清除所有记录吗？此操作不可撤销。')) {
+            // 清空记录数组
+            records.value = [];
+            
+            // 清除地图上的所有标记
+            markers.value.forEach(marker => {
+              map.value.removeLayer(marker);
+            });
+            markers.value = [];
+            
+            // 重置活动记录
+            activeRecordId.value = null;
+            activeRecord.value = null;
+            
+            // 清除本地存储
+            localStorage.removeItem('locationRecords');
+            
+            updateStatus('所有记录已清除');
+          }
+        };
+
+        // 计算存储空间占用
+        const calculateStorageSize = () => {
+          try {
+            const data = localStorage.getItem('locationRecords');
+            if (data) {
+              return (new Blob([data]).size / 1024).toFixed(2);
+            }
+          } catch (error) {
+            console.error('计算存储空间失败:', error);
+          }
+          return '0.00';
         };
 
         // 初始化地图
@@ -592,6 +717,9 @@
             // 添加到地图
             addMarkerToMap(newRecord);
             
+            // 保存到本地存储
+            saveToLocalStorage();
+            
             // 自动聚焦到新记录
             focusOnRecord(newRecord);
             
@@ -600,6 +728,10 @@
             // 更新记录错误信息
             newRecord.error = error;
             newRecord.loading = false;
+            
+            // 保存到本地存储（即使出错也要保存错误信息）
+            saveToLocalStorage();
+            
             updateStatus(error, true);
           }
         };
@@ -654,30 +786,36 @@
           updateStatus(`数据已导出为CSV文件 (${validRecords.length} 条记录)`);
         };
 
-        // 组件挂载时初始化地图
+        // 组件挂载时初始化地图和加载数据
         onMounted(() => {
           initMap();
+          loadFromLocalStorage();
           
-          // 添加示例数据
-          setTimeout(() => {
-            const now = new Date();
-            const { time, date } = formatDateTime(now);
-            
-            const exampleRecord = {
-              id: Date.now() - 1000,
-              time,
-              date,
-              longitude: 116.4074,
-              latitude: 39.9042,
-              accuracy: 25,
-              loading: false,
-              error: null
-            };
-            
-            records.value.push(exampleRecord);
-            addMarkerToMap(exampleRecord);
-            focusOnRecord(exampleRecord);
-          }, 1000);
+          // 如果没有数据，添加示例数据
+          if (records.value.length === 0) {
+            setTimeout(() => {
+              const now = new Date();
+              const { time, date } = formatDateTime(now);
+              
+              const exampleRecord = {
+                id: Date.now() - 1000,
+                time,
+                date,
+                longitude: 116.4074,
+                latitude: 39.9042,
+                accuracy: 25,
+                loading: false,
+                error: null
+              };
+              
+              records.value.push(exampleRecord);
+              addMarkerToMap(exampleRecord);
+              focusOnRecord(exampleRecord);
+              
+              // 保存示例数据
+              saveToLocalStorage();
+            }, 1000);
+          }
         });
 
         return {
@@ -687,7 +825,9 @@
           status,
           handleRecord,
           handleExport,
-          focusOnRecord
+          handleClear,
+          focusOnRecord,
+          calculateStorageSize
         };
       }
     });
