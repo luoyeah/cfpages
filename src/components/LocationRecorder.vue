@@ -103,7 +103,7 @@ const getCurrentLocation = () => {
         }
         reject(errorMessage);
       },
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   });
 };
