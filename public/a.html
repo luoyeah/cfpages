@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>位置记录器 - 地图集成</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #2c3e50;
+    }
+
+    .app-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 20px;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      color: #2c3e50;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    .header p {
+      font-size: 1.1rem;
+      color: #7f8c8d;
+      max-width: 700px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 25px;
+    }
+
+    @media (max-width: 1024px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .panel:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+    }
+
+    .panel-header {
+      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+      color: white;
+      padding: 18px 25px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .panel-header h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    .panel-content {
+      padding: 25px;
+    }
+
+    .map-container {
+      height: 500px;
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #map {
+      height: 100%;
+      width: 100%;
+      z-index: 1;
+    }
+
+    .map-overlay {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      z-index: 2;
+      max-width: 300px;
+    }
+
+    .map-overlay h3 {
+      margin-bottom: 10px;
+      color: #2c3e50;
+      font-size: 1.2rem;
+    }
+
+    .map-overlay p {
+      margin: 5px 0;
+      color: #34495e;
+      font-size: 0.95rem;
+    }
+
+    .location-recorder {
+      width: 100%;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .btn {
+      padding: 14px 28px;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #2980b9 0%, #2573a7 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: linear-gradient(135deg, #27ae60 0%, #219653 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(46, 204, 113, 0.4);
+    }
+
+    .btn i {
+      margin-right: 8px;
+      font-size: 1.2rem;
+    }
+
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 10px;
+      background: #f8f9fa;
+      border-left: 4px solid #3498db;
+      display: flex;
+      align-items: center;
+      transition: all 0.3s ease;
+    }
+
+    .status.error {
+      border-left-color: #e74c3c;
+      background: #fef0ef;
+    }
+
+    .status i {
+      margin-right: 10px;
+      font-size: 1.2rem;
+      color: #3498db;
+    }
+
+    .status.error i {
+      color: #e74c3c;
+    }
+
+    .table-container {
+      margin-top: 25px;
+      overflow-x: auto;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 15px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+
+    th {
+      background-color: #f8f9fa;
+      color: #2c3e50;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+    }
+
+    tr {
+      transition: background-color 0.2s;
+    }
+
+    tr:hover {
+      background-color: #f8f9fa;
+      cursor: pointer;
+    }
+
+    tr.active {
+      background-color: #e3f2fd;
+    }
+
+    tr.active td {
+      font-weight: 500;
+    }
+
+    .empty-row {
+      text-align: center;
+      padding: 30px;
+      color: #7f8c8d;
+      font-style: italic;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 3px solid rgba(52, 152, 219, 0.3);
+      border-radius: 50%;
+      border-top-color: #3498db;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      color: #7f8c8d;
+      font-style: italic;
+    }
+
+    .error-text {
+      color: #e74c3c;
+      font-weight: 500;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding: 20px;
+      color: #7f8c8d;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 768px) {
+      .btn-group {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+
+      th, td {
+        padding: 12px 10px;
+        font-size: 0.9rem;
+      }
+
+      .map-overlay {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="app-container">
+      <div class="header">
+        <h1>位置记录器与地图集成</h1>
+        <p>记录您的位置信息并在交互式地图上查看详细信息</p>
+      </div>
+
+      <div class="main-content">
+        <div class="panel">
+          <div class="panel-header">
+            <h2>位置记录器</h2>
+          </div>
+          <div class="panel-content">
+            <div class="location-recorder">
+              <div class="btn-group">
+                <button class="btn btn-primary" @click="handleRecord">
+                  <i>⏱️</i> 记录当前时间和位置
+                </button>
+                <button class="btn btn-success" @click="handleExport">
+                  <i>📥</i> 导出为CSV文件
+                </button>
+              </div>
+
+              <div class="status" :class="{ error: status.isError }">
+                <i>{{ status.isError ? '❌' : 'ℹ️' }}</i>
+                <span>{{ status.message }}</span>
+              </div>
+
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>序号</th>
+                      <th>记录时间</th>
+                      <th>日期</th>
+                      <th>经度</th>
+                      <th>纬度</th>
+                      <th>精确度</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-if="records.length === 0" class="empty-row">
+                      <td colspan="6">暂无记录数据</td>
+                    </tr>
+                    <tr v-for="(record, index) in records" 
+                        :key="record.id"
+                        :class="{ active: activeRecordId === record.id }"
+                        @click="focusOnRecord(record)">
+                      <td>{{ index + 1 }}</td>
+                      <td>{{ record.time }}</td>
+                      <td>{{ record.date }}</td>
+                      <td :class="{ 'loading-text': record.loading, 'error-text': record.error }">
+                        <span v-if="record.loading" class="loading-spinner"></span>
+                        {{ record.loading ? '获取中...' : (record.error || record.longitude.toFixed(6)) }}
+                      </td>
+                      <td :class="{ 'loading-text': record.loading, 'error-text': record.error }">
+                        <span v-if="record.loading" class="loading-spinner"></span>
+                        {{ record.loading ? '获取中...' : (record.error || record.latitude.toFixed(6)) }}
+                      </td>
+                      <td :class="{ 'loading-text': record.loading, 'error-text': record.error }">
+                        <span v-if="record.loading" class="loading-spinner"></span>
+                        {{ record.loading ? '获取中...' : (record.error || Math.round(record.accuracy) + ' 米') }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>位置地图</h2>
+          </div>
+          <div class="panel-content">
+            <div class="map-container">
+              <div id="map"></div>
+              <div class="map-overlay" v-if="activeRecord">
+                <h3>当前位置详情</h3>
+                <p><strong>记录时间:</strong> {{ activeRecord.time }}</p>
+                <p><strong>日期:</strong> {{ activeRecord.date }}</p>
+                <p><strong>经度:</strong> {{ activeRecord.longitude.toFixed(6) }}</p>
+                <p><strong>纬度:</strong> {{ activeRecord.latitude.toFixed(6) }}</p>
+                <p><strong>精确度:</strong> {{ Math.round(activeRecord.accuracy) }} 米</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>位置记录器 v1.2 &copy; 2025 - 基于Vue3和Leaflet地图</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { createApp, ref, reactive, onMounted } = Vue;
+
+    const app = createApp({
+      setup() {
+        // 响应式数据
+        const records = ref([]);
+        const activeRecordId = ref(null);
+        const activeRecord = ref(null);
+        const map = ref(null);
+        const markers = ref([]);
+        
+        const status = reactive({
+          message: '准备就绪，点击上方按钮开始记录',
+          isError: false
+        });
+
+        // 更新状态信息
+        const updateStatus = (message, isError = false) => {
+          status.message = message;
+          status.isError = isError;
+        };
+
+        // 初始化地图
+        const initMap = () => {
+          // 默认位置设置为北京
+          const defaultPosition = [39.9042, 116.4074];
+          
+          map.value = L.map('map').setView(defaultPosition, 13);
+          
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          }).addTo(map.value);
+          
+          // 添加比例尺
+          L.control.scale({ imperial: false }).addTo(map.value);
+          
+          updateStatus('地图已初始化，等待位置记录...');
+        };
+
+        // 获取当前位置
+        const getCurrentLocation = () => {
+          return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+              reject("您的浏览器不支持地理位置功能");
+              return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+              position => {
+                resolve({
+                  longitude: position.coords.longitude,
+                  latitude: position.coords.latitude,
+                  accuracy: position.coords.accuracy
+                });
+              },
+              error => {
+                let errorMessage;
+                switch (error.code) {
+                  case error.PERMISSION_DENIED:
+                    errorMessage = "用户拒绝了地理位置请求";
+                    break;
+                  case error.POSITION_UNAVAILABLE:
+                    errorMessage = "位置信息不可用";
+                    break;
+                  case error.TIMEOUT:
+                    errorMessage = "获取位置超时";
+                    break;
+                  default:
+                    errorMessage = "发生未知错误";
+                }
+                reject(errorMessage);
+              },
+              { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+          });
+        };
+
+        // 格式化日期和时间
+        const formatDateTime = (date) => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          const hours = String(date.getHours()).padStart(2, '0');
+          const minutes = String(date.getMinutes()).padStart(2, '0');
+          const seconds = String(date.getSeconds()).padStart(2, '0');
+
+          return {
+            time: `${hours}:${minutes}:${seconds}`,
+            date: `${year}-${month}-${day}`
+          };
+        };
+
+        // 添加标记到地图
+        const addMarkerToMap = (record) => {
+          if (record.error || record.loading) return;
+          
+          const position = [record.latitude, record.longitude];
+          
+          // 创建自定义标记图标
+          const customIcon = L.divIcon({
+            className: 'custom-marker',
+            html: `<div style="background: #3498db; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.2);">${records.value.findIndex(r => r.id === record.id) + 1}</div>`,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+          });
+          
+          const marker = L.marker(position, { icon: customIcon })
+            .addTo(map.value)
+            .bindPopup(`
+              <div style="font-weight: bold; margin-bottom: 5px;">记录 #${records.value.findIndex(r => r.id === record.id) + 1}</div>
+              <div>时间: ${record.time}</div>
+              <div>日期: ${record.date}</div>
+              <div>经度: ${record.longitude.toFixed(6)}</div>
+              <div>纬度: ${record.latitude.toFixed(6)}</div>
+              <div>精确度: ${Math.round(record.accuracy)} 米</div>
+            `);
+          
+          markers.value.push(marker);
+          
+          // 如果是第一个记录，调整地图视图
+          if (records.value.length === 1) {
+            map.value.setView(position, 15);
+          }
+        };
+
+        // 聚焦到特定记录
+        const focusOnRecord = (record) => {
+          if (record.error || record.loading) return;
+          
+          activeRecordId.value = record.id;
+          activeRecord.value = record;
+          
+          const position = [record.latitude, record.longitude];
+          map.value.setView(position, 16);
+          
+          // 高亮对应的标记
+          markers.value.forEach(marker => {
+            const markerPos = marker.getLatLng();
+            if (markerPos.lat === record.latitude && markerPos.lng === record.longitude) {
+              marker.openPopup();
+            } else {
+              marker.closePopup();
+            }
+          });
+        };
+
+        // 处理记录事件
+        const handleRecord = async () => {
+          // 获取当前时间
+          const now = new Date();
+          const { time, date } = formatDateTime(now);
+          
+          // 创建新记录（带加载状态）
+          const newRecord = {
+            id: Date.now(),
+            time,
+            date,
+            longitude: 0,
+            latitude: 0,
+            accuracy: 0,
+            loading: true,
+            error: null
+          };
+          
+          // 添加到记录列表
+          records.value.unshift(newRecord);
+          updateStatus("正在获取位置信息...");
+          
+          try {
+            // 异步获取位置信息
+            const location = await getCurrentLocation();
+            
+            // 更新记录
+            newRecord.longitude = location.longitude;
+            newRecord.latitude = location.latitude;
+            newRecord.accuracy = location.accuracy;
+            newRecord.loading = false;
+            
+            // 添加到地图
+            addMarkerToMap(newRecord);
+            
+            // 自动聚焦到新记录
+            focusOnRecord(newRecord);
+            
+            updateStatus(`记录成功！位置：经度 ${location.longitude.toFixed(6)}, 纬度 ${location.latitude.toFixed(6)}`);
+          } catch (error) {
+            // 更新记录错误信息
+            newRecord.error = error;
+            newRecord.loading = false;
+            updateStatus(error, true);
+          }
+        };
+
+        // 处理导出事件
+        const handleExport = () => {
+          // 过滤掉正在加载的记录
+          const validRecords = records.value.filter(r => !r.loading);
+          
+          // 检查是否有数据
+          if (validRecords.length === 0) {
+            updateStatus("没有数据可导出", true);
+            return;
+          }
+
+          // 创建CSV内容
+          let csvContent = "序号,记录时间,日期,经度,纬度,精确度(米)\n";
+
+          validRecords.forEach((record, index) => {
+            const rowData = [
+              index + 1,
+              record.time,
+              record.date,
+              record.error ? record.error : record.longitude.toFixed(6),
+              record.error ? record.error : record.latitude.toFixed(6),
+              record.error ? record.error : Math.round(record.accuracy)
+            ];
+            
+            csvContent += rowData.map(data => {
+              if (data.toString().includes(',')) {
+                return `"${data}"`;
+              }
+              return data;
+            }).join(',') + '\n';
+          });
+
+          // 创建下载链接
+          const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          const now = new Date();
+          const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+
+          link.setAttribute('href', url);
+          link.setAttribute('download', `位置记录_${timestamp}.csv`);
+          link.style.visibility = 'hidden';
+
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          updateStatus(`数据已导出为CSV文件 (${validRecords.length} 条记录)`);
+        };
+
+        // 组件挂载时初始化地图
+        onMounted(() => {
+          initMap();
+          
+          // 添加示例数据
+          setTimeout(() => {
+            const now = new Date();
+            const { time, date } = formatDateTime(now);
+            
+            const exampleRecord = {
+              id: Date.now() - 1000,
+              time,
+              date,
+              longitude: 116.4074,
+              latitude: 39.9042,
+              accuracy: 25,
+              loading: false,
+              error: null
+            };
+            
+            records.value.push(exampleRecord);
+            addMarkerToMap(exampleRecord);
+            focusOnRecord(exampleRecord);
+          }, 1000);
+        });
+
+        return {
+          records,
+          activeRecordId,
+          activeRecord,
+          status,
+          handleRecord,
+          handleExport,
+          focusOnRecord
+        };
+      }
+    });
+
+    app.mount('#app');
+  </script>
+</body>
+</html>
