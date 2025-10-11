@@ -796,6 +796,7 @@
           // 处理导出事件
           const handleExport = () => {
             // 过滤掉正在加载的记录
+            const validRecords = records.value;
             // const validRecords = records.value.filter((r) => !r.loading);
 
             // 检查是否有数据
