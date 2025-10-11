@@ -353,12 +353,12 @@
   <body>
     <div id="app">
       <div class="app-container">
-        <div class="header">
+        <!-- <div class="header">
           <h1>位置记录器 - 地图集成</h1>
           <p>
             记录您的位置信息并在交互式地图上查看详细信息，数据会自动保存到浏览器本地存储
           </p>
-        </div>
+        </div> -->
 
         <div class="main-content">
           <div class="panel">
@@ -861,30 +861,30 @@
             loadFromLocalStorage();
 
             // 如果没有数据，添加示例数据
-            if (records.value.length === 0) {
-              setTimeout(() => {
-                const now = new Date();
-                const { time, date } = formatDateTime(now);
+            // if (records.value.length === 0) {
+            //   setTimeout(() => {
+            //     const now = new Date();
+            //     const { time, date } = formatDateTime(now);
 
-                const exampleRecord = {
-                  id: Date.now() - 1000,
-                  time,
-                  date,
-                  longitude: 116.4074,
-                  latitude: 39.9042,
-                  accuracy: 25,
-                  loading: false,
-                  error: null,
-                };
+            //     const exampleRecord = {
+            //       id: Date.now() - 1000,
+            //       time,
+            //       date,
+            //       longitude: 116.4074,
+            //       latitude: 39.9042,
+            //       accuracy: 25,
+            //       loading: false,
+            //       error: null,
+            //     };
 
-                records.value.push(exampleRecord);
-                addMarkerToMap(exampleRecord);
-                focusOnRecord(exampleRecord);
+            //     records.value.push(exampleRecord);
+            //     addMarkerToMap(exampleRecord);
+            //     focusOnRecord(exampleRecord);
 
-                // 保存示例数据
-                saveToLocalStorage();
-              }, 1000);
-            }
+            //     // 保存示例数据
+            //     saveToLocalStorage();
+            //   }, 1000);
+            // }
           });
 
           return {
