@@ -79,7 +79,7 @@
         <div class="panel-content">
           <div class="map-container">
             <div ref="mapContainer" id="map"></div>
-            <div class="map-overlay" v-if="activeRecord">
+            <!-- <div class="map-overlay" v-if="activeRecord">
               <h3>当前详情</h3>
               <p><strong>时间:</strong> {{ activeRecord.time }}</p>
               <p><strong>日期:</strong> {{ activeRecord.date }}</p>
@@ -95,7 +95,7 @@
                 <strong>精度:</strong> {{
                   Math.round(activeRecord.accuracy) }} 米
               </p>
-            </div>
+            </div> -->
           </div>
         </div>
       </div>
