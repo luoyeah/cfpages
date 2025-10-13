@@ -11,8 +11,14 @@
               <button class="btn btn-primary" @click="handleRecord">
                 <i>⏱️</i> 记录当前时间和位置
               </button>
+              <div class="file-input-wrapper">
+                <button class="btn btn-info">
+                  <i>📥</i> 从CSV文件导入
+                </button>
+                <input type="file" accept=".csv" @change="handleImport" ref="fileInput">
+              </div>
               <button class="btn btn-success" @click="handleExport">
-                <i>📥</i> 导出为CSV文件
+                <i>📤</i> 导出为CSV文件
               </button>
               <button class="btn btn-warning" @click="handleClear">
                 <i>🗑️</i> 清除所有数据
@@ -122,6 +128,7 @@ const activeRecord = ref(null)
 const map = ref(null)
 const markers = ref([])
 const mapContainer = ref(null)
+const fileInput = ref(null)
 
 const status = reactive({
   message: "准备就绪，点击上方按钮开始记录",
@@ -414,7 +421,115 @@ const handleRecord = async () => {
     updateStatus(error, true)
   }
 }
+// 处理导入事件
+const handleImport = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
 
+  // 确认导入操作（会清除现有数据）
+  if (!confirm("导入操作将清除所有现有记录，并替换为CSV文件中的数据。确定要继续吗？")) {
+    // 重置文件输入
+    event.target.value = ''
+    return
+  }
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    try {
+      const content = e.target.result
+      const lines = content.split('\n').filter(line => line.trim() !== '')
+
+      // 移除标题行
+      lines.shift()
+
+      // 清除现有数据
+      handleClear()
+
+      // 解析CSV数据
+      const importedRecords = []
+      let hasError = false
+
+      lines.forEach((line, index) => {
+        const columns = line.split(',').map(col => col.trim().replace(/^"|"$/g, ''))
+
+        // 验证数据格式
+        if (columns.length < 6) {
+          updateStatus(`CSV格式错误：第${index + 2}行数据不完整`, true)
+          hasError = true
+          return
+        }
+
+        const [id, time, date, longitudeStr, latitudeStr, accuracyStr] = columns
+
+        // 尝试转换数值
+        let longitude, latitude, accuracy, _error
+        try {
+          longitude = parseFloat(longitudeStr)
+          latitude = parseFloat(latitudeStr)
+          accuracy = parseInt(accuracyStr)
+          _error = null
+
+          if (isNaN(longitude) || isNaN(latitude) || isNaN(accuracy)) {
+            longitude = longitudeStr
+            latitude = latitudeStr
+            accuracy = accuracyStr
+            _error = '无'
+          }
+        } catch (e) {
+          updateStatus(`CSV数据错误：第${index + 2}行包含无效数值`, true)
+          hasError = true
+          return
+        }
+
+        importedRecords.push({
+          id: Date.now() + index, // 生成新ID
+          time,
+          date,
+          longitude,
+          latitude,
+          accuracy,
+          error: _error,
+          loading: false
+        })
+      })
+
+      if (hasError) return
+
+      // 更新记录
+      records.value = importedRecords
+
+      // 添加到地图
+      importedRecords.forEach(record => {
+        if (!record.error) {
+          addMarkerToMap(record)
+        }
+      })
+
+      // 保存到本地存储
+      saveToLocalStorage()
+
+      // 聚焦到最后一条记录
+      if (importedRecords.length > 0) {
+        focusOnRecord(importedRecords[importedRecords.length - 1])
+      }
+
+      updateStatus(`成功导入 ${importedRecords.length} 条记录`)
+    } catch (error) {
+      console.error('导入CSV失败:', error)
+      updateStatus('导入CSV失败：文件格式不正确', true)
+    } finally {
+      // 重置文件输入
+      event.target.value = ''
+    }
+  }
+
+  reader.onerror = () => {
+    updateStatus('读取文件失败', true)
+    event.target.value = ''
+  }
+
+  reader.readAsText(file, 'UTF-8')
+}
 // 处理导出事件
 const handleExport = () => {
   // 过滤掉正在加载的记录
@@ -802,6 +917,33 @@ tr.active td {
   border-radius: 8px;
   font-size: 0.9rem;
   color: #7f8c8d;
+}
+
+.file-input-wrapper {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.file-input-wrapper input[type="file"] {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.btn-info {
+  background: linear-gradient(135deg, #00c9ff 0%, #007bff 100%);
+  color: white;
+}
+
+.btn-info:hover {
+  background: linear-gradient(135deg, #007bff 0%, #0069d9 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0, 123, 255, 0.4);
 }
 
 @media (max-width: 768px) {
