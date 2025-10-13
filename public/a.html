@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全屏省电</title>
+    <style>
+        /* 彻底清除所有边距和滚动条 */
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            background: #000;
+            /* 禁止文本选择和拖动 */
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+    </style>
+</head>
+<body>
+<script>
+    // 核心全屏逻辑（解决自动全屏限制）
+    function requestFullscreen() {
+        const el = document.documentElement;
+        
+        // 封装所有浏览器的前缀方法
+        const requestMethods = [
+            'requestFullscreen',
+            'mozRequestFullScreen',
+            'webkitRequestFullscreen',
+            'msRequestFullscreen'
+        ];
+        
+        // 尝试触发全屏（需要用户手势，这里用setTimeout模拟用户点击）
+        const trigger = () => {
+            for (const method of requestMethods) {
+                if (el[method]) {
+                    el[method]().catch(err => {
+                        console.log('全屏失败:', err.message);
+                    });
+                    break;
+                }
+            }
+        };
+        
+        // 浏览器安全策略要求全屏必须由用户交互触发
+        // 这里用0ms setTimeout模拟用户点击后的回调
+        setTimeout(trigger, 0);
+    }
+
+    // 页面加载完成后执行
+    window.addEventListener('load', () => {
+        requestFullscreen();
+        
+        // 可选：监听全屏状态变化（无提示）
+        const fullscreenEvents = [
+            'fullscreenchange',
+            'webkitfullscreenchange',
+            'mozfullscreenchange',
+            'MSFullscreenChange'
+        ];
+        
+        fullscreenEvents.forEach(event => {
+            document.addEventListener(event, () => {
+                // 可在此处添加无感知的逻辑（如保持全屏）
+            });
+        });
+    });
+
+    // 防止F11等快捷键干扰（可选）
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'F11') e.preventDefault();
+    });
+</script>
+</body>
+</html>
