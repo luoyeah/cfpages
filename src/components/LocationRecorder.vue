@@ -348,7 +348,7 @@ const focusOnRecord = (record) => {
   activeRecord.value = record
 
   const position = [record.latitude, record.longitude]
-  map.value.setView(position, 16)
+  map.value.setView(position)
 
   // 高亮对应的标记
   markers.value.forEach((marker) => {
