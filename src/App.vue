@@ -1,10 +1,9 @@
 <template>
-  <a href="a.html">位置记录器</a>
-
+  <LocationRecorder/>
 </template>
 
 <script setup>
-
+import LocationRecorder from './components/LocationRecorder.vue';
 
 </script>
 

@@ -1,0 +1,971 @@
+<template>
+  <div class="app-container">
+    <div class="main-content">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>位置记录器</h2>
+        </div>
+        <div class="panel-content">
+          <div class="location-recorder">
+            <div class="btn-group">
+              <button class="btn btn-primary" @click="handleRecord">
+                <i>⏱️</i> 记录当前时间和位置
+              </button>
+              <div class="file-input-wrapper">
+                <button class="btn btn-info">
+                  <i>📥</i> 从CSV文件导入
+                </button>
+                <input type="file" accept=".csv" @change="handleImport" ref="fileInput">
+              </div>
+              <button class="btn btn-success" @click="handleExport">
+                <i>📤</i> 导出为CSV文件
+              </button>
+              <button class="btn btn-warning" @click="handleClear">
+                <i>🗑️</i> 清除所有数据
+              </button>
+            </div>
+
+            <div class="status" :class="{ error: status.isError }">
+              <i>{{ status.isError ? '❌' : 'ℹ️' }}</i>
+              <span>{{ status.message }}</span>
+            </div>
+
+            <div class="storage-info">
+              当前已保存 {{ records.length }} 条记录，占用存储空间约 {{ calculateStorageSize() }} KB
+            </div>
+
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>序号</th>
+                    <th>时间</th>
+                    <th>日期</th>
+                    <th>经度</th>
+                    <th>纬度</th>
+                    <th>精度</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="records.length === 0" class="empty-row">
+                    <td colspan="6">暂无记录数据</td>
+                  </tr>
+                  <tr v-for="(record, index) in records" :key="record.id"
+                    :class="{ active: activeRecordId === record.id }" @click="focusOnRecord(record)">
+                    <td>{{ index + 1 }}</td>
+                    <td>{{ record.time }}</td>
+                    <td>{{ record.date }}</td>
+                    <td :class="{ 'loading-text': record.loading, 'error-text': record.error }">
+                      <span v-if="record.loading" class="loading-spinner"></span>
+                      {{ record.loading ? '...' : (record.error ||
+                        record.longitude.toFixed(6)) }}
+                    </td>
+                    <td :class="{ 'loading-text': record.loading, 'error-text': record.error }">
+                      <span v-if="record.loading" class="loading-spinner"></span>
+                      {{ record.loading ? '...' : (record.error ||
+                        record.latitude.toFixed(6)) }}
+                    </td>
+                    <td :class="{ 'loading-text': record.loading, 'error-text': record.error }">
+                      <span v-if="record.loading" class="loading-spinner"></span>
+                      {{ record.loading ? '...' : (record.error ||
+                        Math.round(record.accuracy) + ' 米') }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h2>位置地图</h2>
+        </div>
+        <div class="panel-content">
+          <div class="map-container">
+            <div ref="mapContainer" id="map"></div>
+            <!-- <div class="map-overlay" v-if="activeRecord">
+              <h3>当前详情</h3>
+              <p><strong>时间:</strong> {{ activeRecord.time }}</p>
+              <p><strong>日期:</strong> {{ activeRecord.date }}</p>
+              <p>
+                <strong>经度:</strong> {{ activeRecord.longitude.toFixed(6)
+                }}
+              </p>
+              <p>
+                <strong>纬度:</strong> {{ activeRecord.latitude.toFixed(6)
+                }}
+              </p>
+              <p>
+                <strong>精度:</strong> {{
+                  Math.round(activeRecord.accuracy) }} 米
+              </p>
+            </div> -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>
+        位置记录器 v1.4 &copy; 2025 - 基于Vue3和Leaflet地图 |
+        数据自动保存到本地
+      </p>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted, nextTick } from 'vue'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+
+// 响应式数据
+const records = ref([])
+const activeRecordId = ref(null)
+const activeRecord = ref(null)
+const map = ref(null)
+const markers = ref([])
+const mapContainer = ref(null)
+const fileInput = ref(null)
+
+const status = reactive({
+  message: "准备就绪，点击上方按钮开始记录",
+  isError: false,
+})
+
+// 更新状态信息
+const updateStatus = (message, isError = false) => {
+  status.message = message
+  status.isError = isError
+}
+
+// 保存数据到localStorage
+const saveToLocalStorage = () => {
+  try {
+    const dataToSave = records.value.map((record) => ({
+      id: record.id,
+      time: record.time,
+      date: record.date,
+      longitude: record.longitude,
+      latitude: record.latitude,
+      accuracy: record.accuracy,
+      error: record.error,
+    }))
+
+    localStorage.setItem(
+      "locationRecords",
+      JSON.stringify(dataToSave)
+    )
+    console.log("数据已保存到本地存储")
+  } catch (error) {
+    console.error("保存数据到本地存储失败:", error)
+    updateStatus("保存数据失败，存储空间可能已满", true)
+  }
+}
+
+// 从localStorage加载数据
+const loadFromLocalStorage = () => {
+  try {
+    const savedData = localStorage.getItem("locationRecords")
+    if (savedData) {
+      const parsedData = JSON.parse(savedData)
+      records.value = parsedData
+
+      // 为每个记录添加地图标记
+      records.value.forEach((record) => {
+        if (!record.error) {
+          addMarkerToMap(record)
+        }
+      })
+
+      updateStatus(`已从本地存储加载 ${records.value.length} 条记录`)
+
+      // 如果有记录，聚焦到最后一条
+      if (records.value.length > 0) {
+        focusOnRecord(records.value[records.value.length - 1])
+      }
+    } else {
+      updateStatus("本地存储中没有找到历史记录")
+    }
+  } catch (error) {
+    console.error("从本地存储加载数据失败:", error)
+    updateStatus("加载历史记录失败", true)
+  }
+}
+
+// 清除所有数据
+const handleClear = () => {
+  if (confirm("确定要清除所有记录吗？此操作不可撤销。")) {
+    // 清空记录数组
+    records.value = []
+
+    // 清除地图上的所有标记
+    markers.value.forEach((marker) => {
+      map.value.removeLayer(marker)
+    })
+    markers.value = []
+
+    // 重置活动记录
+    activeRecordId.value = null
+    activeRecord.value = null
+
+    // 清除本地存储
+    localStorage.removeItem("locationRecords")
+
+    updateStatus("所有记录已清除")
+  }
+}
+
+// 计算存储空间占用
+const calculateStorageSize = () => {
+  try {
+    const data = localStorage.getItem("locationRecords")
+    if (data) {
+      return (new Blob([data]).size / 1024).toFixed(2)
+    }
+  } catch (error) {
+    console.error("计算存储空间失败:", error)
+  }
+  return "0.00"
+}
+
+// 初始化地图
+const initMap = () => {
+  // 确保地图容器已渲染
+  if (!mapContainer.value) return
+
+  // 默认位置设置为北京
+  const defaultPosition = [39.9042, 116.4074]
+
+  map.value = L.map(mapContainer.value).setView(defaultPosition, 13)
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  }).addTo(map.value)
+
+  // 添加比例尺
+  L.control.scale({ imperial: false }).addTo(map.value)
+
+  updateStatus("地图已初始化，等待位置记录...")
+}
+
+// 获取当前位置
+const getCurrentLocation = () => {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject("您的浏览器不支持地理位置功能")
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          longitude: position.coords.longitude,
+          latitude: position.coords.latitude,
+          accuracy: position.coords.accuracy,
+        })
+      },
+      (error) => {
+        let errorMessage
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = "用户拒绝了地理位置请求"
+            break
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "位置信息不可用"
+            break
+          case error.TIMEOUT:
+            errorMessage = "获取位置超时"
+            break
+          default:
+            errorMessage = "发生未知错误"
+        }
+        reject(errorMessage)
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    )
+  })
+}
+
+// 格式化日期和时间
+const formatDateTime = (date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  const hours = String(date.getHours()).padStart(2, "0")
+  const minutes = String(date.getMinutes()).padStart(2, "0")
+  const seconds = String(date.getSeconds()).padStart(2, "0")
+
+  return {
+    time: `${hours}:${minutes}:${seconds}`,
+    date: `${year}-${month}-${day}`,
+  }
+}
+
+// 添加标记到地图
+const addMarkerToMap = (record) => {
+  if (record.error || record.loading) return
+
+  const position = [record.latitude, record.longitude]
+
+  // 创建自定义标记图标
+  const customIcon = L.divIcon({
+    className: "custom-marker",
+    html: `<div style="background: #3498db; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.2);">${records.value.findIndex((r) => r.id === record.id) + 1
+      }</div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  })
+
+  const marker = L.marker(position, { icon: customIcon }).addTo(
+    map.value
+  ).bindPopup(`
+    <div style="font-weight: bold; margin-bottom: 5px;">记录 #${records.value.findIndex((r) => r.id === record.id) + 1
+    }</div>
+    <div>时间: ${record.time}</div>
+    <div>日期: ${record.date}</div>
+    <div>经度: ${record.longitude.toFixed(6)}</div>
+    <div>纬度: ${record.latitude.toFixed(6)}</div>
+    <div>精度: ${Math.round(record.accuracy)} 米</div>
+  `)
+
+  markers.value.push(marker)
+
+  // 如果是第一个记录，调整地图视图
+  if (records.value.length === 1) {
+    map.value.setView(position, 15)
+  }
+}
+
+// 聚焦到特定记录
+const focusOnRecord = (record) => {
+  if (record.error || record.loading) return
+
+  activeRecordId.value = record.id
+  activeRecord.value = record
+
+  const position = [record.latitude, record.longitude]
+  map.value.setView(position)
+
+  // 高亮对应的标记
+  markers.value.forEach((marker) => {
+    const markerPos = marker.getLatLng()
+    if (
+      markerPos.lat === record.latitude &&
+      markerPos.lng === record.longitude
+    ) {
+      marker.openPopup()
+    } else {
+      marker.closePopup()
+    }
+  })
+}
+
+// 处理记录事件
+const handleRecord = async () => {
+  // 获取当前时间
+  const now = new Date()
+  const { time, date } = formatDateTime(now)
+
+  // 创建新记录（带加载状态）
+  const newRecord = {
+    id: Date.now(),
+    time,
+    date,
+    longitude: 0,
+    latitude: 0,
+    accuracy: 0,
+    loading: true,
+    error: null,
+  }
+
+  // 添加到记录列表
+  records.value.push(newRecord)
+  updateStatus("正在获取位置信息...")
+
+  try {
+    // 异步获取位置信息
+    const location = await getCurrentLocation()
+
+    // 更新记录
+    newRecord.longitude = location.longitude
+    newRecord.latitude = location.latitude
+    newRecord.accuracy = location.accuracy
+    newRecord.loading = false
+
+    // 添加到地图
+    addMarkerToMap(newRecord)
+
+    // 保存到本地存储
+    saveToLocalStorage()
+
+    // 自动聚焦到新记录
+    focusOnRecord(newRecord)
+
+    updateStatus(
+      `记录成功！位置：经度 ${location.longitude.toFixed(
+        6
+      )}, 纬度 ${location.latitude.toFixed(6)}`
+    )
+  } catch (error) {
+    // 更新记录错误信息
+    newRecord.error = "failed"
+    newRecord.loading = false
+
+    // 保存到本地存储（即使出错也要保存错误信息）
+    saveToLocalStorage()
+
+    updateStatus(error, true)
+  }
+}
+// 处理导入事件
+const handleImport = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  // 确认导入操作（会清除现有数据）
+  if (!confirm("导入操作将清除所有现有记录，并替换为CSV文件中的数据。确定要继续吗？")) {
+    // 重置文件输入
+    event.target.value = ''
+    return
+  }
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    try {
+      const content = e.target.result
+      const lines = content.split('\n').filter(line => line.trim() !== '')
+
+      // 移除标题行
+      lines.shift()
+
+      // 清除现有数据
+      handleClear()
+
+      // 解析CSV数据
+      const importedRecords = []
+      let hasError = false
+
+      lines.forEach((line, index) => {
+        const columns = line.split(',').map(col => col.trim().replace(/^"|"$/g, ''))
+
+        // 验证数据格式
+        if (columns.length < 6) {
+          updateStatus(`CSV格式错误：第${index + 2}行数据不完整`, true)
+          hasError = true
+          return
+        }
+
+        const [id, time, date, longitudeStr, latitudeStr, accuracyStr] = columns
+
+        // 尝试转换数值
+        let longitude, latitude, accuracy, _error
+        try {
+          longitude = parseFloat(longitudeStr)
+          latitude = parseFloat(latitudeStr)
+          accuracy = parseInt(accuracyStr)
+          _error = null
+
+          if (isNaN(longitude) || isNaN(latitude) || isNaN(accuracy)) {
+            longitude = longitudeStr
+            latitude = latitudeStr
+            accuracy = accuracyStr
+            _error = '无'
+          }
+        } catch (e) {
+          updateStatus(`CSV数据错误：第${index + 2}行包含无效数值`, true)
+          hasError = true
+          return
+        }
+
+        importedRecords.push({
+          id: Date.now() + index, // 生成新ID
+          time,
+          date,
+          longitude,
+          latitude,
+          accuracy,
+          error: _error,
+          loading: false
+        })
+      })
+
+      if (hasError) return
+
+      // 更新记录
+      records.value = importedRecords
+
+      // 添加到地图
+      importedRecords.forEach(record => {
+        if (!record.error) {
+          addMarkerToMap(record)
+        }
+      })
+
+      // 保存到本地存储
+      saveToLocalStorage()
+
+      // 聚焦到最后一条记录
+      if (importedRecords.length > 0) {
+        focusOnRecord(importedRecords[importedRecords.length - 1])
+      }
+
+      updateStatus(`成功导入 ${importedRecords.length} 条记录`)
+    } catch (error) {
+      console.error('导入CSV失败:', error)
+      updateStatus('导入CSV失败：文件格式不正确', true)
+    } finally {
+      // 重置文件输入
+      event.target.value = ''
+    }
+  }
+
+  reader.onerror = () => {
+    updateStatus('读取文件失败', true)
+    event.target.value = ''
+  }
+
+  reader.readAsText(file, 'UTF-8')
+}
+// 处理导出事件
+const handleExport = () => {
+  // 过滤掉正在加载的记录
+  const validRecords = records.value
+  // const validRecords = records.value.filter((r) => !r.loading)
+
+  // 检查是否有数据
+  if (validRecords.length === 0) {
+    updateStatus("没有数据可导出", true)
+    return
+  }
+
+  // 创建CSV内容
+  let csvContent = "序号,时间,日期,经度,纬度,精度(米)\n"
+
+  validRecords.forEach((record, index) => {
+    const rowData = [
+      index + 1,
+      record.time,
+      record.date,
+      record.error ? record.error : record.longitude.toFixed(6),
+      record.error ? record.error : record.latitude.toFixed(6),
+      record.error ? record.error : Math.round(record.accuracy),
+    ]
+
+    csvContent +=
+      rowData
+        .map((data) => {
+          if (data.toString().includes(",")) {
+            return `"${data}"`
+          }
+          return data
+        })
+        .join(",") + "\n"
+  })
+
+  // 创建下载链接
+  const blob = new Blob(["\uFEFF" + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  const now = new Date()
+  const timestamp = `${now.getFullYear()}${String(
+    now.getMonth() + 1
+  ).padStart(2, "0")}${String(now.getDate()).padStart(
+    2,
+    "0"
+  )}_${String(now.getHours()).padStart(2, "0")}${String(
+    now.getMinutes()
+  ).padStart(2, "0")}`
+
+  link.setAttribute("href", url)
+  link.setAttribute("download", `位置记录_${timestamp}.csv`)
+  link.style.visibility = "hidden"
+
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+
+  updateStatus(`数据已导出为CSV文件 (${validRecords.length} 条记录)`)
+}
+
+// 组件挂载时初始化地图和加载数据
+onMounted(() => {
+  // 确保DOM完全渲染后再初始化地图
+  nextTick(() => {
+    initMap()
+    loadFromLocalStorage()
+  })
+})
+</script>
+
+<style scoped>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+
+body {
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+  min-height: 100vh;
+  padding: 20px;
+  color: #2c3e50;
+}
+
+.app-container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 20px;
+}
+
+.header h1 {
+  font-size: 2.5rem;
+  color: #2c3e50;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.header p {
+  font-size: 1.1rem;
+  color: #7f8c8d;
+  max-width: 700px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.main-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 25px;
+}
+
+@media (max-width: 1024px) {
+  .main-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.panel:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+}
+
+.panel-header {
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  color: white;
+  padding: 18px 25px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.panel-header h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.panel-content {
+  padding: 25px;
+}
+
+.map-container {
+  height: 500px;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+#map {
+  height: 100%;
+  width: 100%;
+  z-index: 1;
+}
+
+.map-overlay {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  z-index: 2;
+  max-width: 300px;
+}
+
+.map-overlay h3 {
+  margin-bottom: 10px;
+  color: #2c3e50;
+  font-size: 1.2rem;
+}
+
+.map-overlay p {
+  margin: 5px 0;
+  color: #34495e;
+  font-size: 0.95rem;
+}
+
+.location-recorder {
+  width: 100%;
+}
+
+.btn-group {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.btn {
+  padding: 14px 28px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #2980b9 0%, #2573a7 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  color: white;
+}
+
+.btn-success:hover {
+  background: linear-gradient(135deg, #27ae60 0%, #219653 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(46, 204, 113, 0.4);
+}
+
+.btn-warning {
+  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+  color: white;
+}
+
+.btn-warning:hover {
+  background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(243, 156, 18, 0.4);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  color: white;
+}
+
+.btn-danger:hover {
+  background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(231, 76, 60, 0.4);
+}
+
+.btn i {
+  margin-right: 8px;
+  font-size: 1.2rem;
+}
+
+.status {
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 10px;
+  background: #f8f9fa;
+  border-left: 4px solid #3498db;
+  display: flex;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.status.error {
+  border-left-color: #e74c3c;
+  background: #fef0ef;
+}
+
+.status i {
+  margin-right: 10px;
+  font-size: 1.2rem;
+  color: #3498db;
+}
+
+.status.error i {
+  color: #e74c3c;
+}
+
+.table-container {
+  margin-top: 25px;
+  overflow-x: auto;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 15px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+th {
+  background-color: #f8f9fa;
+  color: #2c3e50;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+}
+
+tr {
+  transition: background-color 0.2s;
+}
+
+tr:hover {
+  background-color: #f8f9fa;
+  cursor: pointer;
+}
+
+tr.active {
+  background-color: #e3f2fd;
+}
+
+tr.active td {
+  font-weight: 500;
+}
+
+.empty-row {
+  text-align: center;
+  padding: 30px;
+  color: #7f8c8d;
+  font-style: italic;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 3px solid rgba(52, 152, 219, 0.3);
+  border-radius: 50%;
+  border-top-color: #3498db;
+  animation: spin 1s ease-in-out infinite;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  color: #7f8c8d;
+  font-style: italic;
+}
+
+.error-text {
+  color: #e74c3c;
+  font-weight: 500;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 40px;
+  padding: 20px;
+  color: #7f8c8d;
+  font-size: 0.9rem;
+}
+
+.storage-info {
+  margin-top: 15px;
+  padding: 10px 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #7f8c8d;
+}
+
+.file-input-wrapper {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.file-input-wrapper input[type="file"] {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.btn-info {
+  background: linear-gradient(135deg, #00c9ff 0%, #007bff 100%);
+  color: white;
+}
+
+.btn-info:hover {
+  background: linear-gradient(135deg, #007bff 0%, #0069d9 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0, 123, 255, 0.4);
+}
+
+@media (max-width: 768px) {
+  .btn-group {
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
+  }
+
+  th,
+  td {
+    padding: 12px 10px;
+    font-size: 0.9rem;
+  }
+
+  .map-overlay {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+}
+</style>

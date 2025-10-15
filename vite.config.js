@@ -13,5 +13,14 @@ export default defineConfig({
       key: fs.readFileSync(path.resolve(__dirname, 'localhost-key.pem')),
       cert: fs.readFileSync(path.resolve(__dirname, 'localhost.pem'))
     },
-  }
+  },
+  build: {
+    rollupOptions: {
+      input: 'main.html' // 你的自定义入口文件
+    },
+    outDir: 'dist',
+    assetsDir: 'assets',
+  },
+
+  base: ''
 })
