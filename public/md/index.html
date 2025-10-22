@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown文档</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+
+        h1 {
+            color: #1a2a6c;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .app-container {
+            display: flex;
+            gap: 20px;
+            /* height: calc(100vh - 180px); */
+        }
+
+        .sidebar {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .sidebar.collapsed {
+            width: 50px;
+            padding: 20px 5px;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .sidebar.collapsed .sidebar-header h2 {
+            writing-mode: vertical-rl;
+            /* transform: rotate(180deg); */
+            margin-top: 10px;
+        }
+
+        .sidebar.collapsed .toggle-btn i {
+            transform: rotate(180deg);
+        }
+
+        .toggle-btn {
+            background: #1a2a6c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .toggle-btn:hover {
+            background: #0d1a4a;
+            transform: scale(1.05);
+        }
+
+        .file-list {
+            list-style: none;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .file-list li {
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-list li:hover {
+            background: #e6f7ff;
+        }
+
+        .file-list li.active {
+            background: #1a2a6c;
+            color: white;
+        }
+
+        .file-list li i {
+            font-size: 1.2rem;
+        }
+
+        .sidebar.collapsed .file-list li span {
+            display: none;
+        }
+
+        .sidebar.collapsed .file-list li {
+            justify-content: center;
+            padding: 12px 0;
+        }
+
+        .preview {
+            flex-grow: 1;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            overflow-y: auto;
+        }
+
+        .preview-content {
+            line-height: 1.6;
+        }
+
+        .preview-content h1,
+        .preview-content h2,
+        .preview-content h3 {
+            color: #1a2a6c;
+            margin: 20px 0 15px;
+        }
+
+        .preview-content p {
+            margin-bottom: 15px;
+        }
+
+        .preview-content pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .preview-content code {
+            /* background: #f5f5f5; */
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .preview-content blockquote {
+            border-left: 4px solid #1a2a6c;
+            padding-left: 15px;
+            margin: 15px 0;
+            color: #555;
+        }
+
+        .preview-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .preview-content th,
+        .preview-content td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        .preview-content th {
+            background-color: #f2f2f2;
+        }
+
+        .preview-content tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .no-file-selected {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #666;
+            text-align: center;
+        }
+
+        .no-file-selected i {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            color: #1a2a6c;
+        }
+
+        .no-file-selected h2 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        footer {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .sidebar {
+                width: 100%;
+                max-height: 300px;
+            }
+
+            .sidebar.collapsed {
+                width: 100%;
+                max-height: 70px;
+            }
+
+            .sidebar.collapsed .sidebar-header {
+                flex-direction: row;
+            }
+
+            .sidebar.collapsed .sidebar-header h2 {
+                writing-mode: horizontal-tb;
+                transform: none;
+            }
+
+            .sidebar.collapsed .file-list {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <div class="app-container">
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <h2>列表</h2>
+                    <button class="toggle-btn" id="toggleSidebar">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                </div>
+                <ul class="file-list" id="fileList">
+                    <!-- 文件列表将通过JavaScript动态生成 -->
+                </ul>
+            </div>
+
+            <div class="preview">
+                <div class="preview-content" id="previewContent">
+                    <div class="no-file-selected">
+                        <i class="fas fa-file-alt"></i>
+                        <h2>未选择文件</h2>
+                        <p>请从左侧列表中选择一个Markdown文件进行预览</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { data } from "./index.js"
+
+
+
+        // DOM元素
+        const fileListElement = document.getElementById('fileList');
+        const previewContentElement = document.getElementById('previewContent');
+        const toggleSidebarButton = document.getElementById('toggleSidebar');
+        const sidebar = document.querySelector('.sidebar');
+
+        // 初始化文件列表
+        function initFileList() {
+            data.files.forEach(file => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <i class="fas ${file.icon}"></i>
+                    <span>${file.name}</span>
+                `;
+                li.dataset.file = file.file;
+
+                li.addEventListener('click', () => {
+                    // 移除所有active类
+                    document.querySelectorAll('.file-list li').forEach(item => {
+                        item.classList.remove('active');
+                    });
+
+                    // 添加active类到当前项
+                    li.classList.add('active');
+
+                    // 加载并渲染Markdown
+                    loadMarkdown(file.file);
+                });
+
+                fileListElement.appendChild(li);
+            });
+        }
+
+        // 加载并渲染Markdown
+        function loadMarkdown(filename) {
+            fetch(filename)
+                .then(response => response.text())
+                .then(markdown => {
+                    previewContentElement.innerHTML = marked.parse(markdown);
+                })
+
+        }
+
+        // 切换侧边栏
+        toggleSidebarButton.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+        });
+
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', () => {
+            initFileList();
+
+            // 默认选择第一个文件
+            if (data.files.length > 0) {
+                const firstFile = document.querySelector('.file-list li');
+                if (firstFile) {
+                    firstFile.click();
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
