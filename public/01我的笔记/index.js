@@ -38,7 +38,7 @@ function initFileList() {
 
 // 加载并渲染Markdown
 function loadMarkdown(filename) {
-    fetch(filename)
+    fetch(`md/${filename}`)
         .then(response => response.text())
         .then(markdown => {
             previewContentElement.innerHTML = marked.parse(markdown);
