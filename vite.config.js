@@ -9,10 +9,10 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     host: "0.0.0.0",
-    https: {
-      key: fs.readFileSync(path.resolve(__dirname, 'localhost-key.pem')),
-      cert: fs.readFileSync(path.resolve(__dirname, 'localhost.pem'))
-    },
+    // https: {
+    //   key: fs.readFileSync(path.resolve(__dirname, 'localhost-key.pem')),
+    //   cert: fs.readFileSync(path.resolve(__dirname, 'localhost.pem'))
+    // },
   },
   build: {
     rollupOptions: {
