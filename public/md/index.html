@@ -314,71 +314,8 @@
 
     </div>
 
-    <script type="module">
-        import { data } from "./index.js"
+    <script type="module" src="index.js">
 
-
-
-        // DOM元素
-        const fileListElement = document.getElementById('fileList');
-        const previewContentElement = document.getElementById('previewContent');
-        const toggleSidebarButton = document.getElementById('toggleSidebar');
-        const sidebar = document.querySelector('.sidebar');
-
-        // 初始化文件列表
-        function initFileList() {
-            data.files.forEach(file => {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <i class="fas ${file.icon}"></i>
-                    <span>${file.name}</span>
-                `;
-                li.dataset.file = file.file;
-
-                li.addEventListener('click', () => {
-                    // 移除所有active类
-                    document.querySelectorAll('.file-list li').forEach(item => {
-                        item.classList.remove('active');
-                    });
-
-                    // 添加active类到当前项
-                    li.classList.add('active');
-
-                    // 加载并渲染Markdown
-                    loadMarkdown(file.file);
-                });
-
-                fileListElement.appendChild(li);
-            });
-        }
-
-        // 加载并渲染Markdown
-        function loadMarkdown(filename) {
-            fetch(filename)
-                .then(response => response.text())
-                .then(markdown => {
-                    previewContentElement.innerHTML = marked.parse(markdown);
-                })
-
-        }
-
-        // 切换侧边栏
-        toggleSidebarButton.addEventListener('click', () => {
-            sidebar.classList.toggle('collapsed');
-        });
-
-        // 初始化应用
-        document.addEventListener('DOMContentLoaded', () => {
-            initFileList();
-
-            // 默认选择第一个文件
-            if (data.files.length > 0) {
-                const firstFile = document.querySelector('.file-list li');
-                if (firstFile) {
-                    firstFile.click();
-                }
-            }
-        });
     </script>
 </body>
 
