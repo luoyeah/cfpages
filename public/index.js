@@ -8,6 +8,7 @@ const url_prefix = `https://${hostname}`;
 categories.push({
     name: "手机应用",
     links: [
+        { name: "二维码", url: "04网站地址/index.html" },
         { name: "Kodbox", url: `${url_prefix}:8001` },
         { name: "OpenList", url: `${url_prefix}:8011` },
         { name: "Syncthing", url: `${url_prefix}:8021` }

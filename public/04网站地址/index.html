@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>本地 IPv4 地址及二维码</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+      body {
+        font-family: "PingFang SC", "Helvetica Neue", Helvetica, Arial,
+          sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f0f2f5; /* 浅灰色背景 */
+        min-height: 100vh;
+      }
+      .container {
+        width: 95%;
+        max-width: 600px; /* 移动端最大宽度限制 */
+        margin: 10px auto;
+        background: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #1890ff; /* 蓝色主题 */
+        text-align: center;
+        font-size: 1.5em;
+        padding-bottom: 10px;
+        margin-top: 0;
+      }
+      .ipv4-item {
+        display: flex;
+        flex-direction: column; /* 在移动端改为垂直布局 */
+        align-items: center;
+        margin-bottom: 25px;
+        padding: 15px;
+        border: 1px solid #e8e8e8;
+        border-radius: 8px;
+        background-color: #ffffff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      }
+      .address-info {
+        text-align: center;
+        margin-bottom: 15px;
+        width: 100%;
+      }
+      .address-info h2 {
+        font-size: 1.1em;
+        color: #555;
+        margin: 0 0 5px 0;
+      }
+      .address-info p {
+        font-size: 1.4em; /* 突出显示 IP 地址 */
+        font-weight: bold;
+        color: #333;
+        margin: 0;
+      }
+      .qr-code-box {
+        width: 150px;
+        height: 150px;
+        padding: 8px;
+        background-color: white;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .loading,
+      .error {
+        text-align: center;
+        padding: 20px;
+        font-size: 1.1em;
+      }
+      .error {
+        color: #f5222d;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>📲 本地 IPv4 地址及二维码</h1>
+      <div id="ipv4-list">
+        <p class="loading">正在加载数据...</p>
+      </div>
+    </div>
+
+    <script>
+      const API_URL = "/api/interfaces";
+      const ipv4ListElement = document.getElementById("ipv4-list");
+
+      /**
+       * 获取数据并渲染到页面
+       */
+      async function fetchAndRenderData() {
+        try {
+          const response = await fetch(API_URL);
+          if (!response.ok) {
+            throw new Error(`HTTP 错误! 状态码: ${response.status}`);
+          }
+          const data = await response.json();
+
+          // 清空加载提示
+          ipv4ListElement.innerHTML = "";
+
+          let ipv4Addresses = [];
+
+          for (const interfaceName in data) {
+            if (data[interfaceName].IPv4) {
+              data[interfaceName].IPv4.forEach((ipv4) => {
+                // 【关键过滤】: 仅显示 IPv4 地址，并排除本地回环地址 (127.0.0.1)
+                if (ipv4.addr && ipv4.addr !== "127.0.0.1") {
+                  ipv4Addresses.push({
+                    interface: interfaceName,
+                    addr: `https://${ipv4.addr}:8003`,
+                  });
+                }
+              });
+            }
+          }
+
+          if (ipv4Addresses.length === 0) {
+            ipv4ListElement.innerHTML =
+              '<p class="loading">未找到可用的非本地回环 IPv4 地址。</p>';
+            return;
+          }
+
+          // 确保 QRCode 库已加载，避免 "QRCode is not defined" 错误
+          if (typeof QRCode === "undefined") {
+            throw new Error("QRCode 库加载失败，请检查网络或 CDN 链接！");
+          }
+
+          // 渲染每个 IPv4 地址及其二维码
+          ipv4Addresses.forEach((item, index) => {
+            const itemDiv = document.createElement("div");
+            itemDiv.className = "ipv4-item";
+
+            // 仅显示接口名和地址
+            const infoDiv = document.createElement("div");
+            infoDiv.className = "address-info";
+            infoDiv.innerHTML = `
+                        <h2>${item.interface}</h2>
+                        <p>${item.addr}</p>
+                    `;
+            itemDiv.appendChild(infoDiv);
+
+            // 二维码容器
+            const qrBoxDiv = document.createElement("div");
+            qrBoxDiv.className = "qr-code-box";
+            const qrId = `qrcode-${index}`;
+            qrBoxDiv.id = qrId;
+            itemDiv.appendChild(qrBoxDiv);
+
+            ipv4ListElement.appendChild(itemDiv);
+
+            // 生成二维码 (内容为 IP 地址)
+            new QRCode(document.getElementById(qrId), {
+              text: item.addr,
+              width: 150,
+              height: 150,
+              colorDark: "#000000",
+              colorLight: "#ffffff",
+              correctLevel: QRCode.CorrectLevel.H,
+            });
+          });
+        } catch (error) {
+          console.error("获取数据失败:", error);
+          ipv4ListElement.innerHTML = `<p class="error">加载数据失败: ${error.message}</p>`;
+        }
+      }
+
+      // 页面加载完成后调用函数
+      window.onload = fetchAndRenderData;
+    </script>
+  </body>
+</html>
