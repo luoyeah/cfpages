@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>本地 IPv4 地址及二维码</title>
+    <title>Web服务地址</title>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <style>
       body {
@@ -82,7 +82,7 @@
   </head>
   <body>
     <div class="container">
-      <h1>📲 本地 IPv4 地址及二维码</h1>
+      <h1>Web服务地址</h1>
       <div id="ipv4-list">
         <p class="loading">正在加载数据...</p>
       </div>
@@ -120,6 +120,7 @@
                 }
               });
             }
+            
           }
 
           if (ipv4Addresses.length === 0) {
@@ -142,8 +143,8 @@
             const infoDiv = document.createElement("div");
             infoDiv.className = "address-info";
             infoDiv.innerHTML = `
-                        <h2>${item.interface}</h2>
-                        <p>${item.addr}</p>
+                        <h2>网卡：${item.interface}</h2>
+                        <p><a href='${item.addr}'>${item.addr}</a></p>
                     `;
             itemDiv.appendChild(infoDiv);
 
