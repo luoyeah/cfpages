@@ -1,180 +1,552 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Web服务地址</title>
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-    <style>
-      body {
-        font-family: "PingFang SC", "Helvetica Neue", Helvetica, Arial,
-          sans-serif;
-        margin: 0;
-        padding: 0;
-        background-color: #f0f2f5; /* 浅灰色背景 */
-        min-height: 100vh;
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>网络接口地址</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+      background-size: 400% 400%;
+      animation: gradientBG 15s ease infinite;
+      color: #333;
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    
+    .container {
+      width: 100%;
+      max-width: 800px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      margin: 20px;
+    }
+    
+    header {
+      background: linear-gradient(to right, #1890ff, #0056b3);
+      color: white;
+      padding: 25px 30px;
+      text-align: center;
+      position: relative;
+    }
+    
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+    }
+    
+    h1 i {
+      font-size: 1.8rem;
+    }
+    
+    .subtitle {
+      font-size: 1.1rem;
+      opacity: 0.9;
+      font-weight: 300;
+    }
+    
+    .stats-bar {
+      display: flex;
+      justify-content: space-around;
+      background: #f0f7ff;
+      padding: 15px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .stat-card {
+      text-align: center;
+      padding: 10px 15px;
+      border-radius: 10px;
+      background: white;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+      flex: 1;
+      margin: 0 5px;
+    }
+    
+    .stat-card h3 {
+      font-size: 1.8rem;
+      color: #1890ff;
+      margin-bottom: 5px;
+    }
+    
+    .stat-card p {
+      font-size: 0.9rem;
+      color: #666;
+    }
+    
+    .content {
+      padding: 25px;
+    }
+    
+    .interface-card {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+      margin-bottom: 25px;
+      overflow: hidden;
+      border-left: 5px solid #1890ff;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .interface-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .interface-header {
+      background: #f8fbff;
+      padding: 18px 25px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #e6f0ff;
+    }
+    
+    .interface-icon {
+      width: 50px;
+      height: 50px;
+      background: #e6f7ff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 18px;
+      color: #1890ff;
+      font-size: 1.5rem;
+    }
+    
+    .interface-info h2 {
+      font-size: 1.4rem;
+      color: #1890ff;
+      margin-bottom: 5px;
+    }
+    
+    .interface-info p {
+      color: #666;
+      font-size: 0.95rem;
+    }
+    
+    .addresses-container {
+      padding: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    
+    .address-item {
+      background: #f9fbfd;
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid #e1e8f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    
+    .address-type {
+      display: inline-block;
+      background: #e6f7ff;
+      color: #1890ff;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    
+    .address-value {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: #333;
+      margin: 10px 0;
+      word-break: break-all;
+      width: 100%;
+    }
+    
+    .address-link {
+      display: inline-block;
+      color: #1890ff;
+      text-decoration: none;
+      margin-top: 8px;
+      font-weight: 500;
+      width: 100%;
+    }
+    
+    .address-link:hover {
+      text-decoration: underline;
+    }
+    
+    .qr-code-box {
+      width: 120px;
+      height: 120px;
+      padding: 8px;
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-top: 15px;
+    }
+    
+    .loading, .error {
+      text-align: center;
+      padding: 50px 20px;
+      font-size: 1.2rem;
+    }
+    
+    .error {
+      color: #f5222d;
+      font-weight: bold;
+    }
+    
+    .refresh-btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(to right, #1890ff, #0056b3);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(24, 144, 255, 0.4);
+    }
+    
+    .refresh-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 7px 20px rgba(24, 144, 255, 0.6);
+    }
+    
+    .refresh-btn:active {
+      transform: translateY(1px);
+    }
+    
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+      font-size: 0.9rem;
+      border-top: 1px solid #eee;
+      background: #f9fbfd;
+    }
+    
+    @media (max-width: 768px) {
+      .addresses-container {
+        grid-template-columns: 1fr;
       }
-      .container {
-        width: 95%;
-        max-width: 600px; /* 移动端最大宽度限制 */
-        margin: 10px auto;
-        background: white;
-        padding: 15px;
-        border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      }
+      
       h1 {
-        color: #1890ff; /* 蓝色主题 */
-        text-align: center;
-        font-size: 1.5em;
-        padding-bottom: 10px;
-        margin-top: 0;
+        font-size: 1.8rem;
       }
-      .ipv4-item {
-        display: flex;
-        flex-direction: column; /* 在移动端改为垂直布局 */
-        align-items: center;
-        margin-bottom: 25px;
-        padding: 15px;
-        border: 1px solid #e8e8e8;
-        border-radius: 8px;
-        background-color: #ffffff;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      
+      .stats-bar {
+        flex-direction: column;
+        gap: 10px;
       }
-      .address-info {
+    }
+    
+    @media (max-width: 480px) {
+      .interface-header {
+        flex-direction: column;
         text-align: center;
+      }
+      
+      .interface-icon {
+        margin-right: 0;
         margin-bottom: 15px;
-        width: 100%;
       }
-      .address-info h2 {
-        font-size: 1.1em;
-        color: #555;
-        margin: 0 0 5px 0;
+      
+      .content {
+        padding: 15px;
       }
-      .address-info p {
-        font-size: 1.4em; /* 突出显示 IP 地址 */
-        font-weight: bold;
-        color: #333;
-        margin: 0;
+      
+      .address-item {
+        padding: 15px;
       }
-      .qr-code-box {
-        width: 150px;
-        height: 150px;
-        padding: 8px;
-        background-color: white;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-      .loading,
-      .error {
-        text-align: center;
-        padding: 20px;
-        font-size: 1.1em;
-      }
-      .error {
-        color: #f5222d;
-        font-weight: bold;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <h1>Web服务地址</h1>
-      <div id="ipv4-list">
-        <p class="loading">正在加载数据...</p>
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><i class="fas fa-network-wired"></i> 网络接口地址</h1>
+      <p class="subtitle">查看所有活动网络接口的IP地址和二维码</p>
+    </header>
+    
+    <div class="stats-bar">
+      <div class="stat-card">
+        <h3 id="interface-count">0</h3>
+        <p>网络接口</p>
+      </div>
+      <div class="stat-card">
+        <h3 id="ipv4-count">0</h3>
+        <p>IPv4 地址</p>
+      </div>
+      <div class="stat-card">
+        <h3 id="ipv6-count">0</h3>
+        <p>IPv6 地址</p>
       </div>
     </div>
+    
+    <div class="content">
+      <div id="interfaces-container">
+        <div class="loading">
+          <p><i class="fas fa-spinner fa-spin"></i> 正在加载网络接口数据...</p>
+        </div>
+      </div>
+      
+      <button class="refresh-btn" id="refresh-btn">
+        <i class="fas fa-sync-alt"></i> 刷新数据
+      </button>
+    </div>
+    
+    <footer>
+      <p>网络接口监控工具 &copy; 2023 | 实时显示所有活动网络接口信息</p>
+    </footer>
+  </div>
 
-    <script>
-      const API_URL = "/api/interfaces";
-      const ipv4ListElement = document.getElementById("ipv4-list");
-
-      /**
-       * 获取数据并渲染到页面
-       */
-      async function fetchAndRenderData() {
-        try {
-          const response = await fetch(API_URL);
-          if (!response.ok) {
-            throw new Error(`HTTP 错误! 状态码: ${response.status}`);
-          }
-          const data = await response.json();
-
-          // 清空加载提示
-          ipv4ListElement.innerHTML = "";
-
-          let ipv4Addresses = [];
-
-          for (const interfaceName in data) {
-            if (data[interfaceName].IPv4) {
-              data[interfaceName].IPv4.forEach((ipv4) => {
-                // 【关键过滤】: 仅显示 IPv4 地址，并排除本地回环地址 (127.0.0.1)
-                if (ipv4.addr && ipv4.addr !== "127.0.0.1") {
-                  ipv4Addresses.push({
-                    interface: interfaceName,
-                    addr: `https://${ipv4.addr}:8003`,
-                  });
-                }
-              });
-            }
-            
-          }
-
-          if (ipv4Addresses.length === 0) {
-            ipv4ListElement.innerHTML =
-              '<p class="loading">未找到可用的非本地回环 IPv4 地址。</p>';
+  <script>
+    const API_URL = "/api/interfaces";
+    const interfacesContainer = document.getElementById("interfaces-container");
+    const refreshBtn = document.getElementById("refresh-btn");
+    const interfaceCountEl = document.getElementById("interface-count");
+    const ipv4CountEl = document.getElementById("ipv4-count");
+    const ipv6CountEl = document.getElementById("ipv6-count");
+    
+    // 统计变量
+    let totalInterfaces = 0;
+    let totalIpv4 = 0;
+    let totalIpv6 = 0;
+    
+    /**
+     * 获取数据并渲染到页面
+     */
+    async function fetchAndRenderData() {
+      try {
+        interfacesContainer.innerHTML = `
+          <div class="loading">
+            <p><i class="fas fa-spinner fa-spin"></i> 正在加载网络接口数据...</p>
+          </div>
+        `;
+        
+        const response = await fetch(API_URL);
+        if (!response.ok) {
+          throw new Error(`HTTP 错误: ${response.status}`);
+        }
+        const data = await response.json();
+        
+        // 重置统计
+        totalInterfaces = 0;
+        totalIpv4 = 0;
+        totalIpv6 = 0;
+        
+        // 清空容器
+        interfacesContainer.innerHTML = "";
+        
+        if (!data || data.length === 0) {
+          interfacesContainer.innerHTML = `
+            <div class="error">
+              <p><i class="fas fa-exclamation-triangle"></i> 未找到网络接口数据</p>
+            </div>
+          `;
+          updateStats();
+          return;
+        }
+        
+        // 处理每个网络接口
+        data.forEach((interfaceData, index) => {
+          totalInterfaces++;
+          
+          // 处理IPv4地址
+          const ipv4Addresses = interfaceData.ipv4.filter(ip => ip !== "127.0.0.1");
+          totalIpv4 += ipv4Addresses.length;
+          
+          // 处理IPv6地址
+          const ipv6Addresses = interfaceData.ipv6.filter(ip => ip !== "::1");
+          totalIpv6 += ipv6Addresses.length;
+          
+          // 如果没有有效地址则跳过
+          if (ipv4Addresses.length === 0 && ipv6Addresses.length === 0) {
             return;
           }
-
-          // 确保 QRCode 库已加载，避免 "QRCode is not defined" 错误
-          if (typeof QRCode === "undefined") {
-            throw new Error("QRCode 库加载失败，请检查网络或 CDN 链接！");
-          }
-
-          // 渲染每个 IPv4 地址及其二维码
-          ipv4Addresses.forEach((item, index) => {
-            const itemDiv = document.createElement("div");
-            itemDiv.className = "ipv4-item";
-
-            // 仅显示接口名和地址
-            const infoDiv = document.createElement("div");
-            infoDiv.className = "address-info";
-            infoDiv.innerHTML = `
-                        <h2>网卡：${item.interface}</h2>
-                        <p><a href='${item.addr}'>${item.addr}</a></p>
-                    `;
-            itemDiv.appendChild(infoDiv);
-
-            // 二维码容器
-            const qrBoxDiv = document.createElement("div");
-            qrBoxDiv.className = "qr-code-box";
-            const qrId = `qrcode-${index}`;
-            qrBoxDiv.id = qrId;
-            itemDiv.appendChild(qrBoxDiv);
-
-            ipv4ListElement.appendChild(itemDiv);
-
-            // 生成二维码 (内容为 IP 地址)
-            new QRCode(document.getElementById(qrId), {
-              text: item.addr,
-              width: 150,
-              height: 150,
-              colorDark: "#000000",
-              colorLight: "#ffffff",
-              correctLevel: QRCode.CorrectLevel.H,
-            });
-          });
-        } catch (error) {
-          console.error("获取数据失败:", error);
-          ipv4ListElement.innerHTML = `<p class="error">加载数据失败: ${error.message}</p>`;
-        }
+          
+          // 创建接口卡片
+          const interfaceCard = document.createElement("div");
+          interfaceCard.className = "interface-card";
+          
+          interfaceCard.innerHTML = `
+            <div class="interface-header">
+              <div class="interface-icon">
+                <i class="fas fa-${getInterfaceIcon(interfaceData.eth)}"></i>
+              </div>
+              <div class="interface-info">
+                <h2>${interfaceData.eth}</h2>
+                <p>${getInterfaceDescription(interfaceData.eth)}</p>
+              </div>
+            </div>
+            <div class="addresses-container">
+              ${renderAddresses(interfaceData, ipv4Addresses, ipv6Addresses)}
+            </div>
+          `;
+          
+          interfacesContainer.appendChild(interfaceCard);
+          
+          // 为每个地址生成二维码 - 修复位置问题
+          renderQrCodes(interfaceCard, ipv4Addresses, ipv6Addresses);
+        });
+        
+        updateStats();
+      } catch (error) {
+        console.error("获取数据失败:", error);
+        interfacesContainer.innerHTML = `
+          <div class="error">
+            <p><i class="fas fa-exclamation-circle"></i> 加载数据失败: ${error.message}</p>
+          </div>
+        `;
       }
-
-      // 页面加载完成后调用函数
-      window.onload = fetchAndRenderData;
-    </script>
-  </body>
+    }
+    
+    /**
+     * 渲染地址列表 - 修复二维码位置问题
+     */
+    function renderAddresses(interfaceData, ipv4Addresses, ipv6Addresses) {
+      let addressesHTML = '';
+      
+      if (ipv4Addresses.length > 0) {
+        ipv4Addresses.forEach(ip => {
+          addressesHTML += `
+            <div class="address-item">
+              <span class="address-type">IPv4 地址</span>
+              <div class="address-value">${ip}</div>
+              <a href="https://${ip}:8003" class="address-link" target="_blank">
+                <i class="fas fa-external-link-alt"></i> 访问服务
+              </a>
+              <div class="qr-code-box" id="qrcode-${interfaceData.eth.replace(/\s+/g, '-').toLowerCase()}-${ip.replace(/\./g, '-')}-ipv4"></div>
+            </div>
+          `;
+        });
+      }
+      
+      if (ipv6Addresses.length > 0) {
+        ipv6Addresses.forEach(ip => {
+          addressesHTML += `
+            <div class="address-item">
+              <span class="address-type">IPv6 地址</span>
+              <div class="address-value">${ip}</div>
+              <a href="https://[${ip}]:8003" class="address-link" target="_blank">
+                <i class="fas fa-external-link-alt"></i> 访问服务
+              </a>
+              <div class="qr-code-box" id="qrcode-${interfaceData.eth.replace(/\s+/g, '-').toLowerCase()}-${ip.replace(/:/g, '-')}-ipv6"></div>
+            </div>
+          `;
+        });
+      }
+      
+      return addressesHTML;
+    }
+    
+    /**
+     * 为地址生成二维码 - 修复位置问题
+     */
+    function renderQrCodes(container, ipv4Addresses, ipv6Addresses) {
+      // 生成IPv4地址的二维码
+      ipv4Addresses.forEach(ip => {
+        const qrId = `qrcode-${container.querySelector('.interface-header h2').textContent.replace(/\s+/g, '-').toLowerCase()}-${ip.replace(/\./g, '-')}-ipv4`;
+        const qrElement = document.getElementById(qrId);
+        
+        if (qrElement) {
+          new QRCode(qrElement, {
+            text: `https://${ip}:8003`,
+            width: 100,
+            height: 100,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H,
+          });
+        }
+      });
+      
+      // 生成IPv6地址的二维码
+      ipv6Addresses.forEach(ip => {
+        const qrId = `qrcode-${container.querySelector('.interface-header h2').textContent.replace(/\s+/g, '-').toLowerCase()}-${ip.replace(/:/g, '-')}-ipv6`;
+        const qrElement = document.getElementById(qrId);
+        
+        if (qrElement) {
+          new QRCode(qrElement, {
+            text: `https://[${ip}]:8003`,
+            width: 100,
+            height: 100,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H,
+          });
+        }
+      });
+    }
+    
+    /**
+     * 更新统计信息
+     */
+    function updateStats() {
+      interfaceCountEl.textContent = totalInterfaces;
+      ipv4CountEl.textContent = totalIpv4;
+      ipv6CountEl.textContent = totalIpv6;
+    }
+    
+    /**
+     * 根据网卡名称获取图标
+     */
+    function getInterfaceIcon(interfaceName) {
+      if (interfaceName.includes('eth') || interfaceName.includes('以太')) return 'lan';
+      if (interfaceName.includes('wlan') || interfaceName.includes('wifi')) return 'wifi';
+      if (interfaceName.includes('lo')) return 'loop';
+      return 'network-wired';
+    }
+    
+    /**
+     * 根据网卡名称获取描述
+     */
+    function getInterfaceDescription(interfaceName) {
+      if (interfaceName.includes('eth') || interfaceName.includes('以太')) return '有线以太网连接';
+      if (interfaceName.includes('wlan') || interfaceName.includes('wifi')) return '无线网络连接';
+      if (interfaceName.includes('lo')) return '本地回环接口';
+      return '网络接口';
+    }
+    
+    // 添加刷新按钮事件监听
+    refreshBtn.addEventListener('click', fetchAndRenderData);
+    
+    // 页面加载完成后调用函数
+    window.onload = fetchAndRenderData;
+  </script>
+</body>
 </html>
