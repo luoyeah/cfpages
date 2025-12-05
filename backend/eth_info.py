@@ -89,7 +89,9 @@ def get_network_interfaces() -> List[Dict]:
         # 自定义过滤
         if not _is_valid_ipv4(ipv4):
             continue
-        
+
+        ipv6 = _filter_ipv6(ipv6)
+
         result.append({
             "eth": friendly_name,
             "ipv4": ipv4,
@@ -121,6 +123,14 @@ def _is_valid_ipv4(ipv4):
             return False
             
     return True
+
+def _filter_ipv6(ipv6):
+    result = []
+    for ip in ipv6:
+        if not ip.startswith("fe80::"):
+            result.append(ip)
+
+    return result
 
         
 def _print_interfaces(interfaces: List[Dict]):
