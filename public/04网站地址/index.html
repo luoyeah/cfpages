@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>网络接口地址</title>
+  <title>服务地址</title>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -21,7 +21,7 @@
       color: #333;
       line-height: 1.6;
       min-height: 100vh;
-      padding: 20px;
+      padding: 0px;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -40,7 +40,7 @@
       border-radius: 20px;
       box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
       overflow: hidden;
-      margin: 20px;
+      margin: 10px;
     }
     
     header {
@@ -202,8 +202,8 @@
     }
     
     .qr-code-box {
-      width: 120px;
-      height: 120px;
+      width: 180px;
+      height: 180px;
       padding: 8px;
       background: white;
       border: 1px solid #e0e0e0;
@@ -298,11 +298,11 @@
 <body>
   <div class="container">
     <header>
-      <h1><i class="fas fa-network-wired"></i> 网络接口地址</h1>
-      <p class="subtitle">查看所有活动网络接口的IP地址和二维码</p>
+      <h1><i class="fas fa-network-wired"></i> 服务地址</h1>
+      <!-- <p class="subtitle">查看所有活动网络接口的IP地址和二维码</p> -->
     </header>
     
-    <div class="stats-bar">
+    <!-- <div class="stats-bar">
       <div class="stat-card">
         <h3 id="interface-count">0</h3>
         <p>网络接口</p>
@@ -315,7 +315,7 @@
         <h3 id="ipv6-count">0</h3>
         <p>IPv6 地址</p>
       </div>
-    </div>
+    </div> -->
     
     <div class="content">
       <div id="interfaces-container">
@@ -324,14 +324,14 @@
         </div>
       </div>
       
-      <button class="refresh-btn" id="refresh-btn">
+      <!-- <button class="refresh-btn" id="refresh-btn">
         <i class="fas fa-sync-alt"></i> 刷新数据
-      </button>
+      </button> -->
     </div>
     
-    <footer>
+    <!-- <footer>
       <p>网络接口监控工具 &copy; 2023 | 实时显示所有活动网络接口信息</p>
-    </footer>
+    </footer> -->
   </div>
 
   <script>
@@ -486,8 +486,8 @@
         if (qrElement) {
           new QRCode(qrElement, {
             text: `https://${ip}:8003`,
-            width: 100,
-            height: 100,
+            width: 200,
+            height: 200,
             colorDark: "#000000",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H,
@@ -503,8 +503,8 @@
         if (qrElement) {
           new QRCode(qrElement, {
             text: `https://[${ip}]:8003`,
-            width: 100,
-            height: 100,
+            width: 200,
+            height: 200,
             colorDark: "#000000",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H,
@@ -517,9 +517,9 @@
      * 更新统计信息
      */
     function updateStats() {
-      interfaceCountEl.textContent = totalInterfaces;
-      ipv4CountEl.textContent = totalIpv4;
-      ipv6CountEl.textContent = totalIpv6;
+      // interfaceCountEl.textContent = totalInterfaces;
+      // ipv4CountEl.textContent = totalIpv4;
+      // ipv6CountEl.textContent = totalIpv6;
     }
     
     /**
@@ -543,7 +543,7 @@
     }
     
     // 添加刷新按钮事件监听
-    refreshBtn.addEventListener('click', fetchAndRenderData);
+    // refreshBtn.addEventListener('click', fetchAndRenderData);
     
     // 页面加载完成后调用函数
     window.onload = fetchAndRenderData;
