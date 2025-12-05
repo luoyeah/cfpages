@@ -68,6 +68,10 @@ def get_network_interfaces() -> List[Dict]:
             friendly_name = friendly_map.get(clean_guid, iface)  # 找不到则用原始GUID
         else:
             friendly_name = iface  # Linux原生名已友好
+            
+            
+        if not _is_valid_eth_name(friendly_name):
+            continue
         
         # 2. 提取IP地址（IPv4/IPv6）
         try:
@@ -78,51 +82,46 @@ def get_network_interfaces() -> List[Dict]:
         ipv4 = [info["addr"] for info in addr_info.get(netifaces.AF_INET, [])]
         ipv6 = [info["addr"] for info in addr_info.get(netifaces.AF_INET6, [])]
         
-
-        ipv4, ipv6 = _filter_ip(ipv4, ipv6)  # 仅保留第一个有效IP
-
         # 3. 过滤无IP的接口（可选，保留可删除）
         if not ipv4 and not ipv6:
             continue
         
+        # 自定义过滤
+        if not _is_valid_ipv4(ipv4):
+            continue
+        
         result.append({
             "eth": friendly_name,
-            # "original_name": iface,
             "ipv4": ipv4,
-            "ipv6": ipv6,
-            # "system": system
+            "ipv6": ipv6
         })
     
     return result
+    
+def _is_valid_eth_name(eth_name):
+    # 黑名单模式
+    block_list = ['tun']
+    
+    # 判断是否在黑名单内
+    for _ in block_list:
+        if eth_name.startswith(_):
+            return False
+            
+    return True
 
 
-def _filter_ip(ipv4, ipv6):
-    ipv4_result = []
-    ipv6_result = []
+def _is_valid_ipv4(ipv4):
     # 过滤没有ipv4的。
     if not ipv4:
-        return [], []
+        return False
     
     # 过滤本地回环
     for ip in ipv4:
         if ip.startswith("127."):
-            return [], []
-    
-    ipv4_result = ipv4.copy()
+            return False
+            
+    return True
 
-    # 获取ipv6 外部ip
-    ipv6_ext_ip = None
-    for ip in ipv6:
-        if not ip.startswith("fe80::"):
-            ipv6_ext_ip = ip
-        else:
-            pass
-
-    if ipv6_ext_ip:  # 存在外部ipv6
-        ipv4_result = []
-        ipv6_result = [ipv6_ext_ip]
-
-    return ipv4_result, ipv6_result
         
 def _print_interfaces(interfaces: List[Dict]):
     """打印结果（友好格式）"""

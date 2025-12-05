@@ -536,9 +536,9 @@
      * 根据网卡名称获取描述
      */
     function getInterfaceDescription(interfaceName) {
-      if (interfaceName.includes('eth') || interfaceName.includes('以太')) return '有线以太网连接';
-      if (interfaceName.includes('wlan') || interfaceName.includes('wifi')) return '无线网络连接';
-      if (interfaceName.includes('lo')) return '本地回环接口';
+      if (interfaceName.toLowerCase().includes('eth') || interfaceName.includes('以太')) return '有线以太网';
+      if (interfaceName.toLowerCase().includes('wlan') || interfaceName.toLowerCase().includes('wifi')) return '无线网络';
+      if (interfaceName.toLowerCase().includes('rmnet')) return '数据网络';
       return '网络接口';
     }
     
