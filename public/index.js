@@ -12,7 +12,8 @@ categories.push({
         { name: "资源管理器", url: `${url_prefix}:8001` },
         { name: "文件同步", url: `${url_prefix}:8021` },
         { name: "文件服务", url: `${url_prefix}:8011` },
-        { name: "文件服务(IE)", url: `http://${hostname}:8002`}
+        { name: "文件服务(IE)", url: `http://${hostname}:8002`},
+        { name: "电量", url: "03电量/index.html" },
     ]
 });
 

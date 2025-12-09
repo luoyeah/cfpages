@@ -5,8 +5,12 @@ from typing import List, Dict
 if platform.system() == "Windows":
     import winreg  # Windows标准库，无需额外安装
 
+from fastapi import FastAPI, APIRouter, HTTPException
 
 import netifaces
+
+router = APIRouter()
+
 
 def _get_windows_friendly_names() -> Dict[str, str]:
     """
@@ -46,6 +50,7 @@ def _get_windows_friendly_names() -> Dict[str, str]:
     return friendly_map
 
 
+@router.get("/")
 def get_network_interfaces() -> List[Dict]:
     """
     获取所有网络接口的信息（跨平台）：
@@ -147,6 +152,10 @@ def _print_interfaces(interfaces: List[Dict]):
         print(f"  IPv6地址：{', '.join(info['ipv6']) if info['ipv6'] else '无'}")
         # print(f"  system: {info['system']}")
         print("-" * 50)
+
+
+def setup_routes(app: FastAPI):
+    app.include_router(router, prefix="/api/eth")
 
 
 if __name__ == "__main__":
